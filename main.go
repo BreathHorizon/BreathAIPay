@@ -306,8 +306,8 @@ func createPaymentIntent(c *gin.Context) {
 		Metadata: map[string]string{ // 添加元数据
 			"email":     email,
 			"sitetype":  siteType,
-			"amount":    strconv.Itoa(selectedProduct.Points), // 使用后端验证的价格
-			"productID": strconv.Itoa(productID),              // 记录商品ID到元数据
+			"amount":    strconv.Itoa(selectedProduct.Points * quantityVal), // 使用后端给出的积分数量
+			"productID": strconv.Itoa(productID),                            // 记录商品ID到元数据
 		},
 		// 启用自动支付方式选择
 		AutomaticPaymentMethods: &stripe.PaymentIntentAutomaticPaymentMethodsParams{
