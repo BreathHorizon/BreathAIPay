@@ -24,7 +24,28 @@ go run main.go
 | <del>OPENWEBUI_CHINESE_TOKEN</del> | <del>中国站JWT Token</del> |
 | STRIPE_PRIVATE_KEY * | Stripe私钥 |
 | STRIPE_PUBLIC_KEY * | Stripe公钥 |
+| TRUST_ALL_PROXIES | 是否信任所有反向代理(默认false),开启开选项是一个不明智的决定 |
 > 警告: 如果不配置Stripe公/私钥, 程序将无法启动
+
+### 商品列表
+> 位于`main.go`的40行
+
+```go
+[]Product{
+    {ID: 1, Name: "100,000 积分", Price: 20.0, Points: 100000},
+    {ID: 2, Name: "500,000 积分", Price: 50.0, Points: 500000},
+    {ID: 3, Name: "1,000,000 积分", Price: 100.0, Points: 1000000},
+}
+```
+#### 配置项
+| 配置项 | 说明 |
+| :--: | :--: |
+| ID | 一个数字,不能重复,用于前后端通信 | 
+| Name | 展示给用户的商品名称,对价格和后续积分无影响 |
+| Price | 商品单价 |
+| Points | 每一次购买增加的积分 |
+> 注: 手续费由程序基于Price自动计算
+> 注: 价格为CNY
 
 ### 数据库说明
 项目使用Sqlite数据库, 会在根目录下**自动**建立`customers.db`和`orders.db`, 请确保程序有足够的写入权限
