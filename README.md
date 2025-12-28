@@ -24,7 +24,7 @@ go run main.go
 | <del>OPENWEBUI_CHINESE_TOKEN</del> | <del>中国站JWT Token</del> |
 | STRIPE_PRIVATE_KEY * | Stripe私钥 |
 | STRIPE_PUBLIC_KEY * | Stripe公钥 |
-| TRUST_ALL_PROXIES | 是否信任所有反向代理(默认false),开启开选项是一个不明智的决定 |
+| TRUST_ALL_PROXIES | 是否信任所有反向代理(默认false),开启该选项是一个不明智的决定 |
 > 警告: 如果不配置Stripe公/私钥, 程序将无法启动
 
 ### 商品列表
