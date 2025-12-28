@@ -2,18 +2,23 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/stripe/stripe-go/v84"
+	"github.com/stripe/stripe-go/v84/customer"
 	"github.com/stripe/stripe-go/v84/paymentintent"
 
 	_ "modernc.org/sqlite"
 )
 
-var db *sql.DB         // 数据库连接器
-var dbMutex sync.Mutex // 数据库操作锁，用于解决并发访问问题
+var db *sql.DB                  // 数据库连接器
+var dbMutex sync.Mutex          // 数据库操作锁，用于解决并发访问问题
+var dbMutexCustomers sync.Mutex // 客户数据库操作锁，用于解决并发访问问题
+
+var dbCustomers *sql.DB
 
 func InitDB() error {
 	var err error
@@ -23,9 +28,18 @@ func InitDB() error {
 		return err
 	}
 
+	dbCustomers, err = sql.Open("sqlite", "./custormers.db?cache=shared&journal_mode=WAL")
+	if err != nil {
+		log.Fatal("打开数据库失败:", err)
+		return err
+	}
+
 	// 设置连接池参数，减少锁竞争
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
+
+	dbCustomers.SetMaxOpenConns(1)
+	dbCustomers.SetMaxIdleConns(1)
 
 	// 创建订单表
 	sqlTable := `CREATE TABLE IF NOT EXISTS orders (
@@ -41,6 +55,18 @@ func InitDB() error {
 		log.Fatal("创建订单表失败:", err)
 		return err
 	}
+
+	// 客户记录表
+	sqlTable = `CREATE TABLE IF NOT EXISTS customers (
+		id TEXT PRIMARY KEY,
+		mail TEXT NOT NULL UNIQUE
+	)`
+	_, err = dbCustomers.Exec(sqlTable)
+	if err != nil {
+		log.Fatal("创建客户表失败:", err)
+		return err
+	}
+
 	log.Println("数据库初始化成功")
 	return nil
 }
@@ -198,4 +224,40 @@ func DeleteExpiredOrder() error {
 	}
 	// log.Printf("完成过期订单处理")
 	return nil
+}
+
+func GetCustomerId(email string) (string, error) {
+	// 获取CustomerID , 如果不存在则新建
+	dbMutexCustomers.Lock()
+	var id string
+	sqlQuery := "SELECT id FROM customers WHERE mail = ?"
+	err := dbCustomers.QueryRow(sqlQuery, email).Scan(&id)
+	dbMutexCustomers.Unlock()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Print("客户: ", email, "不存在, 开始新建")
+		} else {
+			return "", err
+		}
+	} else {
+		return id, nil
+	}
+	// 调用Stripe创建新客户
+	params := &stripe.CustomerParams{
+		Email: stripe.String(email),
+	}
+
+	customerObj, err := customer.New(params)
+	if err != nil {
+		return "", err
+	}
+	// 写入数据库
+	dbMutexCustomers.Lock()
+	sqlQuery = "INSERT INTO customers (id, mail) VALUES (?, ?)"
+	_, err = dbCustomers.Exec(sqlQuery, customerObj.ID, email) // 写入数据库
+	dbMutexCustomers.Unlock()
+	if err != nil {
+		return customerObj.ID, err
+	}
+	return customerObj.ID, nil
 }

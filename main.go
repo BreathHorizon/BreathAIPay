@@ -2,6 +2,7 @@ package main
 
 import (
 	"breathaipay/database"
+	"breathaipay/mail"
 	"breathaipay/openwebui"
 	"breathaipay/utils"
 
@@ -281,12 +282,24 @@ func createPaymentIntent(c *gin.Context) {
 	priceVal := int(selectedProduct.Price)
 	total := (float64(priceVal*quantityVal) + 1.9) / 0.971
 
+	// 获取客户ID
+	customerId, err := database.GetCustomerId(email)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"message": "创建客户失败",
+			},
+		})
+		return
+	}
+
 	// --- 2. 准备 PaymentIntent 参数 ---
 	params := &stripe.PaymentIntentParams{
-		Amount:      stripe.Int64(int64(total * 100.0)),
-		Currency:    stripe.String(string(stripe.CurrencyCNY)),
-		Description: stripe.String("购买灵息积分"),
-		Metadata: map[string]string{ // 可选：添加元数据
+		Amount:       stripe.Int64(int64(total * 100.0)),
+		Currency:     stripe.String(string(stripe.CurrencyCNY)),
+		Description:  stripe.String("购买灵息积分"),
+		ReceiptEmail: stripe.String(email),
+		Metadata: map[string]string{ // 添加元数据
 			"email":     email,
 			"sitetype":  siteType,
 			"amount":    strconv.Itoa(selectedProduct.Points), // 使用后端验证的价格
@@ -297,6 +310,7 @@ func createPaymentIntent(c *gin.Context) {
 			Enabled:        stripe.Bool(true),
 			AllowRedirects: stripe.String("always"),
 		},
+		Customer: stripe.String(customerId),
 	}
 
 	// --- 3. 调用 Stripe API 创建 PaymentIntent ---
@@ -456,5 +470,8 @@ func finishPay(email string, amount int64, sitetype int) {
 	if err != nil {
 		log.Println("Failed to add balance:", err)
 		return
+	} else {
+		log.Print("处理完成, 发送确认邮件")
+		mail.NewMailer().SendMail([]string{email}, "积分已到账", fmt.Sprintf("您好,尊敬的灵息用户 %s , 您的 %s 积分已到账<br><br>灵息.com 自动邮件<br>请勿回复", email, strconv.Itoa(int(amount))), "text/html")
 	}
 }
