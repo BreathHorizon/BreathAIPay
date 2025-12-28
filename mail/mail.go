@@ -31,6 +31,8 @@ func NewMailer() *Mailer {
 
 // SendMail 发送邮件
 func (m *Mailer) SendMail(to []string, subject, body, contentType string) error {
+	log.Print("登录服务器: ", m.Host, ":", m.Port, "以", m.Username)
+
 	if m.Username == "" || m.Password == "" {
 		return fmt.Errorf("SMTP credentials are not set")
 	}
@@ -72,53 +74,108 @@ func (m *Mailer) SendMail(to []string, subject, body, contentType string) error 
 	// 连接SMTP服务器
 	addr := fmt.Sprintf("%s:%s", m.Host, m.Port)
 
-	// 使用STARTTLS发送邮件
-	conn, err := smtp.Dial(addr)
-	if err != nil {
-		return fmt.Errorf("failed to connect to SMTP server: %w", err)
-	}
-	defer conn.Close()
-
-	// 启用STARTTLS
-	if err = conn.StartTLS(&tls.Config{ServerName: m.Host}); err != nil {
-		return fmt.Errorf("failed to start TLS: %w", err)
-	}
-
-	// 设置发件人
-	if err = conn.Mail(m.Username); err != nil {
-		return fmt.Errorf("failed to set sender: %w", err)
-	}
-
-	// 设置收件人
-	for _, recipient := range to {
-		if err = conn.Rcpt(recipient); err != nil {
-			return fmt.Errorf("failed to set recipient %s: %w", recipient, err)
+	// 检查是否使用SSL端口(465)或STARTTLS端口
+	if m.Port == "465" || m.Port == "994" {
+		// 使用SSL连接
+		tlsConfig := &tls.Config{
+			ServerName: m.Host,
 		}
-	}
+		conn, err := tls.Dial("tcp", addr, tlsConfig)
+		if err != nil {
+			return fmt.Errorf("failed to connect to SMTP server via SSL: %w", err)
+		}
+		defer conn.Close()
 
-	// 发送邮件内容
-	writer, err := conn.Data()
-	if err != nil {
-		return fmt.Errorf("failed to get data writer: %w", err)
-	}
-	defer writer.Close()
+		client, err := smtp.NewClient(conn, m.Host)
+		if err != nil {
+			return fmt.Errorf("failed to create SMTP client: %w", err)
+		}
+		defer client.Quit()
+		defer client.Close()
 
-	// 使用auth变量进行认证
-	if err = conn.Auth(auth); err != nil {
-		return fmt.Errorf("authentication failed: %w", err)
-	}
+		// 认证
+		if err = client.Auth(auth); err != nil {
+			return fmt.Errorf("authentication failed: %w", err)
+		}
 
-	_, err = writer.Write([]byte(message))
-	if err != nil {
-		return fmt.Errorf("failed to write email body: %w", err)
-	}
+		// 设置发件人
+		if err = client.Mail(m.Username); err != nil {
+			return fmt.Errorf("failed to set sender: %w", err)
+		}
 
-	if err = writer.Close(); err != nil {
-		return fmt.Errorf("failed to close data writer: %w", err)
-	}
+		// 设置收件人
+		for _, recipient := range to {
+			if err = client.Rcpt(recipient); err != nil {
+				return fmt.Errorf("failed to set recipient %s: %w", recipient, err)
+			}
+		}
 
-	log.Print("邮件发送成功")
-	return conn.Quit()
+		// 发送邮件内容
+		writer, err := client.Data()
+		if err != nil {
+			return fmt.Errorf("failed to get data writer: %w", err)
+		}
+
+		_, err = writer.Write([]byte(message))
+		if err != nil {
+			return fmt.Errorf("failed to write email body: %w", err)
+		}
+
+		if err = writer.Close(); err != nil {
+			return fmt.Errorf("failed to close data writer: %w", err)
+		}
+
+		log.Print("邮件发送成功")
+		return nil
+	} else {
+		// 使用STARTTLS发送邮件
+		conn, err := smtp.Dial(addr)
+		if err != nil {
+			return fmt.Errorf("failed to connect to SMTP server: %w", err)
+		}
+		defer conn.Close()
+
+		// 启用STARTTLS
+		if err = conn.StartTLS(&tls.Config{ServerName: m.Host}); err != nil {
+			return fmt.Errorf("failed to start TLS: %w", err)
+		}
+
+		// 设置发件人
+		if err = conn.Mail(m.Username); err != nil {
+			return fmt.Errorf("failed to set sender: %w", err)
+		}
+
+		// 设置收件人
+		for _, recipient := range to {
+			if err = conn.Rcpt(recipient); err != nil {
+				return fmt.Errorf("failed to set recipient %s: %w", recipient, err)
+			}
+		}
+
+		// 发送邮件内容
+		writer, err := conn.Data()
+		if err != nil {
+			return fmt.Errorf("failed to get data writer: %w", err)
+		}
+		defer writer.Close()
+
+		// 使用auth变量进行认证
+		if err = conn.Auth(auth); err != nil {
+			return fmt.Errorf("authentication failed: %w", err)
+		}
+
+		_, err = writer.Write([]byte(message))
+		if err != nil {
+			return fmt.Errorf("failed to write email body: %w", err)
+		}
+
+		if err = writer.Close(); err != nil {
+			return fmt.Errorf("failed to close data writer: %w", err)
+		}
+
+		log.Print("邮件发送成功")
+		return conn.Quit()
+	}
 }
 
 // isValidEmail 验证邮箱格式
