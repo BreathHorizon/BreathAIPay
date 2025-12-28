@@ -3,7 +3,7 @@
 
 ***
 ### 语言/Language
-| 简体中文 | [English](README_EN.md) |
+简体中文 | [English](README_EN.md)
 ***
 
 ### 项目启动

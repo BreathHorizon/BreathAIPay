@@ -3,7 +3,7 @@ A bridge connecting Stripe and OpenWebUI - automating payments & adding credits
 
 ***
 ### 语言/Language
-| [简体中文](README.md) | English |
+[简体中文](README.md) | English
 ***
 
 ### Project Startup
