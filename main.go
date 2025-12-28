@@ -52,6 +52,10 @@ func main() {
 
 	// 初始化Stripe - 正确设置API密钥
 	stripe.Key = utils.GetEnvVariable("STRIPE_PRIVATE_KEY", "")
+	pubKey := utils.GetEnvVariable("STRIPE_PUBLIC_KEY", "")
+	if stripe.Key == "" || pubKey == "" {
+		log.Fatal("没有配置Stripe密钥")
+	}
 
 	// 设置时区
 	time.Local, _ = time.LoadLocation("Asia/Shanghai")
@@ -185,14 +189,14 @@ func main() {
 		total := (float64(price*quantityVal) + 1.9) / 0.971
 
 		c.HTML(http.StatusOK, "payment.html", gin.H{
-			"ProductID": productID,
-			"Points":    selectedProduct.Name,
-			"Price":     fmt.Sprintf("%.0f", selectedProduct.Price),
-			"SiteType":  siteType,
-			"Quantity":  quantityStr, // 保持为字符串以满足模板显示需求
-			"Email":     email,
-			// 移除PaymentMethod传递
-			"Total": total,
+			"ProductID":         productID,
+			"Points":            selectedProduct.Name,
+			"Price":             fmt.Sprintf("%.0f", selectedProduct.Price),
+			"SiteType":          siteType,
+			"Quantity":          quantityStr, // 保持为字符串以满足模板显示需求
+			"Email":             email,
+			"Total":             total,
+			"STRIPE_PUBLIC_KEY": pubKey,
 		})
 	})
 

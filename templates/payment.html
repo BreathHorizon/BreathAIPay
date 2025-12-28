@@ -164,7 +164,7 @@
         document.addEventListener('DOMContentLoaded', async function() {
             try {
                 // 初始化Stripe
-                var stripe = Stripe('pk_test_51SgeTXCW2j6CBP3B8E6hiM4TkhMf5arDPvtturkl2RhYSDV6oYdvs6tGQeT2lSOw56t9VIAIF3pb0jRoZBY6Uep300zGVkU4DH');
+                var stripe = Stripe("{{ .STRIPE_PUBLIC_KEY }}");
                 
                 // 获取client secret和过期时间
                 const data = await getClientSecret();
