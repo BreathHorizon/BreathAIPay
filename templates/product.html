@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>灵息 - 商品选择</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: #2575fc 100%;
+            color: white;
+            padding: 1rem 0;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 2rem 0;
+        }
+        .products-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 1rem 1rem;
+        }
+        .card-product {
+            transition: transform 0.3s, box-shadow 0.3s;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 100%;
+            min-height: 250px;
+        }
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .card-product:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .price-tag {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2575fc;
+            margin: 1rem 0;
+        }
+        .point-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .footer {
+            padding: 1rem 0;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem 0;
+            }
+            .products-container {
+                padding: 1rem 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1 class="text-center">灵息</h1>
+            <p class="text-center mb-0">选择您需要的积分套餐</p>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="products-container">
+            <div class="row justify-content-center">
+                {{range .products}}
+                <div class="col-md-4 mb-4">
+                    <div class="card card-product h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title point-value">{{.Name}}</h5>
+                            <p class="price-tag">¥{{.Price}}</p>
+                            <form action="/checkout" method="POST">
+                                <input type="hidden" name="productID" value="{{.ID}}">
+                                <button type="submit" class="btn btn-primary w-100">购买</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="container">
+            <p class="mb-0">© 2025 灵息.com</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

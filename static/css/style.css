@@ -1,0 +1,106 @@
+body {
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.header {
+    background: linear-gradient(135deg,#2575fc 100%);
+    color: white;
+    padding: 1rem 0;
+    margin-bottom: 2rem;
+}
+
+.card-product {
+    transition: transform 0.3s, box-shadow 0.3s;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.card-product:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.price-tag {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2575fc;
+}
+
+.point-value {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.footer {
+    margin-top: 2rem;
+    padding: 1rem 0;
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.form-container {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.point-summary {
+    background: #e8f4ff;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.payment-container {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.order-summary {
+    background: #e8f4ff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.info-item {
+    margin-bottom: 0.8rem;
+}
+
+.info-label {
+    font-weight: bold;
+    display: inline-block;
+    width: 100px;
+}
+
+.amount {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #2575fc;
+}
+
+.qr-code-placeholder {
+    width: 200px;
+    height: 200px;
+    background-color: #f0f0f0;
+    border: 2px dashed #ccc;
+    margin: 1rem auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+}
+
+/* 添加新的CSS样式 */
+.text-message {
+    font-weight: normal; /* 不加粗 */
+    margin-bottom: 1rem; /* 增加行间距 */
+    font-size: 1.1rem; /* 调整字体大小 */
+}

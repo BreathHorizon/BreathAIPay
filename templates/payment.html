@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>灵息 - 付款确认</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    <!-- 添加Stripe SDK -->
+    <script src="https://js.stripe.com/v3"></script>
+    <style>
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #0d6efd;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            text-align: center;
+            margin-top: 1rem;
+        }
+        
+        #countdown-timer {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #d9534f;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1 class="text-center">灵息</h1>
+            <p class="text-center mb-0">订单确认与支付</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="payment-container">
+                    <h3 class="text-center mb-4">订单详情</h3>
+                    
+                    <div class="order-summary">
+                        <div class="info-item">
+                            <span class="info-label">商品:</span>
+                            <span>{{ .Points }} 积分</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">单价:</span>
+                            <span>¥{{ .Price }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">数量:</span>
+                            <span>{{ .Quantity }} 次</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">小计:</span>
+                            <span>¥{{ printf "%.2f" (mul (parseFloat .Price) (parseFloat .Quantity)) }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">手续费:</span>
+                            <span>¥{{ printf "%.2f" (sub .Total (mul (parseFloat .Price) (parseFloat .Quantity))) }}</span>
+                        </div>
+                        <hr>
+                        <div class="text-center">
+                            <div class="amount">¥{{ printf "%.2f" .Total }}</div>
+                            <div class="text-muted">合计(含手续费)</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="info-item">
+                                <span class="info-label">站点类型:</span>
+                                <span>{{ if eq .SiteType "domestic" }}国内站{{ else }}国际站{{ end }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">邮箱:</span>
+                                <span>{{ .Email }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <h5>支付方式</h5>
+                            <p class="text-muted">安全可靠的在线支付</p>
+                        </div>
+                    </div>
+
+                    <!-- Stripe支付表单 -->
+                    <div class="mt-4">
+                        <h5 class="mb-3">完成支付</h5>
+                        <!-- 加载指示器 -->
+                        <div id="loading-spinner" class="mb-4">
+                            <div class="spinner"></div>
+                            <div class="loading-text">正在加载支付组件...</div>
+                        </div>
+                        <!-- 倒计时显示 -->
+                        <div id="countdown-timer" style="display: none;">
+                            支付剩余时间: <span id="time-left">30:00</span>
+                        </div>
+                        <!-- Stripe支付元素 -->
+                        <div id="payment-element" style="display: none;">
+                            <!--Stripe.js将在此处注入支付元素-->
+                        </div>
+                        <div id="payment-errors" role="alert" class="text-danger mt-2"></div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button class="btn btn-success btn-lg" type="button" id="submit-button" style="display: none;">立即支付</button>
+                        <a href="/" class="btn btn-outline-secondary">返回首页</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="container">
+            <p class="mb-0">© 2025 灵息.com</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Stripe支付处理脚本 -->
+    <script>
+        // 从后端获取clientSecret
+        async function getClientSecret() {
+            const response = await fetch('/api/payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    points: "{{ .Points }}",
+                    price: "{{ .Price }}",
+                    siteType: "{{ .SiteType }}",
+                    quantity: "{{ .Quantity }}",
+                    email: "{{ .Email }}"
+                })
+            });
+            
+            const data = await response.json();
+            
+            // 检查是否有错误信息
+            if (data.error) {
+                throw new Error(data.error.message);
+            }
+            
+            return data;
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 初始化Stripe
+                var stripe = Stripe('pk_test_51SgeTXCW2j6CBP3B8E6hiM4TkhMf5arDPvtturkl2RhYSDV6oYdvs6tGQeT2lSOw56t9VIAIF3pb0jRoZBY6Uep300zGVkU4DH');
+                
+                // 获取client secret和过期时间
+                const data = await getClientSecret();
+                const clientSecret = data.clientSecret;
+                const expiresAt = data.expiresAt; // 从后端获取过期时间戳
+                
+                // 创建支付元素
+                const elements = stripe.elements({ clientSecret });
+                const paymentElement = elements.create('payment');
+                paymentElement.mount('#payment-element');
+                
+                // 隐藏加载指示器并显示支付元素和按钮
+                document.getElementById('loading-spinner').style.display = 'none';
+                document.getElementById('payment-element').style.display = 'block';
+                document.getElementById('submit-button').style.display = 'block';
+                document.getElementById('countdown-timer').style.display = 'block';
+                
+                // 启动倒计时
+                startCountdown(expiresAt);
+                
+                // 处理支付按钮点击事件
+                const submitButton = document.getElementById('submit-button');
+                submitButton.addEventListener('click', async function() {
+                    // 禁用按钮以防止重复点击
+                    submitButton.disabled = true;
+                    
+                    // 确认支付
+                    const { error } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: {
+                            return_url: window.location.origin + '/success', // 支付成功后的跳转地址
+                        },
+                    });
+                    
+                    // 如果有错误，显示错误信息
+                    if (error) {
+                        const errorMsg = error.message || '支付失败，请重试';
+                        document.getElementById('payment-errors').textContent = errorMsg;
+                        console.error('Stripe确认支付错误:', error);
+                        
+                        // 重新启用按钮
+                        submitButton.disabled = false;
+                    }
+                });
+                
+            } catch (error) {
+                // 显示错误信息
+                document.getElementById('loading-spinner').style.display = 'none';
+                document.getElementById('payment-errors').textContent = error.message;
+                console.error('Error:', error);
+            }
+        });
+        
+        // 倒计时功能
+        function startCountdown(expiresAtTimestamp) {
+            const countdownElement = document.getElementById('time-left');
+            const updateTimer = setInterval(function() {
+                const now = Math.floor(Date.now() / 1000); // 当前时间戳（秒）
+                const timeLeft = Math.max(0, expiresAtTimestamp - now); // 剩余时间（秒）
+                
+                // 计算分钟和秒
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                
+                // 格式化显示
+                const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                countdownElement.textContent = timeString;
+                
+                // 如果时间到了，禁用支付按钮并显示消息
+                if (timeLeft <= 0) {
+                    clearInterval(updateTimer);
+                    document.getElementById('submit-button').disabled = true;
+                    document.getElementById('payment-errors').textContent = '订单已过期，请返回重新下单。';
+                    
+                    // 可以选择自动重定向到首页
+                    setTimeout(function() {
+                        window.location.href = '/';
+                    }, 3000); // 3秒后重定向
+                }
+            }, 1000); // 每秒更新一次
+        }
+    </script>
+</body>
+</html>

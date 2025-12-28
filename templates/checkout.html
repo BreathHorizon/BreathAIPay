@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>灵息 - 信息填写</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1 class="text-center">灵息</h1>
+            <p class="text-center mb-0">请填写购买信息</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="form-container">
+                    <!-- 显示选择的商品信息 -->
+                    <div class="point-summary">
+                        <h5>购买套餐：</h5>
+                        <p class="mb-1">{{ .Points }} 积分 - ¥{{ .Price }}</p>
+                    </div>
+
+                    <form action="/payment" method="POST">
+                        <!-- 隐藏字段传递商品信息 -->
+                        <input type="hidden" name="points" value="{{ .Points }}">
+                        <input type="hidden" name="price" value="{{ .Price }}">
+
+                        <!-- 国内/国际站选择 -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">选择站点类型</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="siteType" id="domestic" value="domestic" required>
+                                    <label class="form-check-label" for="domestic">国内站</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="siteType" id="international" value="international" required>
+                                    <label class="form-check-label" for="international">国际站</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 购买次数 -->
+                        <div class="mb-3">
+                            <label for="quantity" class="form-label fw-bold">购买次数</label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required style="max-width: 150px;">
+                        </div>
+
+                        <!-- 邮箱 -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label fw-bold">邮箱地址</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="请输入您的邮箱地址" required>
+                        </div>
+
+                        <!-- 移除支付方式选择，使用默认值 -->
+                        <input type="hidden" name="paymentMethod" value="default">
+
+                        <!-- 提交按钮 -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">前往支付</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="container">
+            <p class="mb-0">© 2025 灵息.com</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 防止输入无效值
+        document.addEventListener('DOMContentLoaded', function() {
+            const quantityInput = document.getElementById('quantity');
+            
+            quantityInput.addEventListener('input', function() {
+                let value = parseInt(this.value);
+                if (isNaN(value) || value < 1) {
+                    this.value = 1;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
