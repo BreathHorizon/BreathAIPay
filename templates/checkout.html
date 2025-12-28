@@ -27,6 +27,7 @@
 
                     <form action="/payment" method="POST">
                         <!-- 隐藏字段传递商品信息 -->
+                        <input type="hidden" name="productID" value="{{ .ProductID }}">
                         <input type="hidden" name="points" value="{{ .Points }}">
                         <input type="hidden" name="price" value="{{ .Price }}">
 
@@ -34,10 +35,10 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold">选择站点类型</label>
                             <div>
-                                <div class="form-check form-check-inline">
+                                <!-- <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="siteType" id="domestic" value="domestic" required>
                                     <label class="form-check-label" for="domestic">国内站</label>
-                                </div>
+                                </div> -->
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="siteType" id="international" value="international" required>
                                     <label class="form-check-label" for="international">国际站</label>

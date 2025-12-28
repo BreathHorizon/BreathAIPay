@@ -143,11 +143,11 @@
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
-                    points: "{{ .Points }}",
-                    price: "{{ .Price }}",
+                    productID: "{{ .ProductID }}",
                     siteType: "{{ .SiteType }}",
                     quantity: "{{ .Quantity }}",
                     email: "{{ .Email }}"
+
                 })
             });
             

@@ -29,17 +29,18 @@ type Order struct {
 }
 
 type Product struct {
-	ID    int     `json:"id"`
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
+	ID     int     `json:"id"`
+	Name   string  `json:"name"`
+	Price  float64 `json:"price"`
+	Points int     `json:"points"`
 }
 
 // 从函数获取商品列表
 func GetProducts() []Product {
 	return []Product{
-		{ID: 1, Name: "100,000 积分", Price: 20.0},
-		{ID: 2, Name: "500,000 积分", Price: 50.0},
-		{ID: 3, Name: "1,000,000 积分", Price: 100.0},
+		{ID: 1, Name: "100,000 积分", Price: 20.0, Points: 100000},
+		{ID: 2, Name: "500,000 积分", Price: 50.0, Points: 500000},
+		{ID: 3, Name: "1,000,000 积分", Price: 100.0, Points: 1000000},
 	}
 }
 
@@ -113,7 +114,7 @@ func main() {
 			c.HTML(http.StatusOK, "product.html", nil)
 			return
 		}
-		
+
 		// 根据商品ID获取商品信息
 		products := GetProducts()
 		var selectedProduct *Product
@@ -123,41 +124,69 @@ func main() {
 				break
 			}
 		}
-		
+
 		if selectedProduct == nil {
 			log.Printf("未找到ID为 %d 的商品", productID)
 			c.HTML(http.StatusOK, "product.html", nil)
 			return
 		}
-		
+
 		c.HTML(http.StatusOK, "checkout.html", gin.H{
-			"Points": selectedProduct.Name,
-			"Price":  fmt.Sprintf("%.0f", selectedProduct.Price),
+			"Points":    selectedProduct.Name,
+			"Price":     fmt.Sprintf("%.0f", selectedProduct.Price),
 			"ProductID": selectedProduct.ID,
 		})
 	})
 
 	// 付款页面
 	r.POST("/payment", func(c *gin.Context) {
-		productID := c.PostForm("productID")
-		points := c.PostForm("points")
-		price := c.PostForm("price")
+		productIDStr := c.PostForm("productID")
 		siteType := c.PostForm("siteType")
 		quantityStr := c.PostForm("quantity")
 		email := c.PostForm("email")
-		// 移除paymentMethod处理，使用默认值
-		// paymentMethod := c.PostForm("paymentMethod")
 
-		priceVal, _ := strconv.Atoi(price)
-		quantityVal, _ := strconv.Atoi(quantityStr)
-		// 修改这里：计算包含手续费的总价
-		total := (float64(priceVal*quantityVal) + 1.9) / 0.971
-		// total := float64(priceVal*quantityVal)*1.029 + 1
+		// 验证商品ID
+		productID, err := strconv.Atoi(productIDStr)
+		if err != nil {
+			log.Printf("商品ID转换失败: %v", err)
+			c.HTML(http.StatusOK, "product.html", nil)
+			return
+		}
+
+		// 根据商品ID重新获取商品信息，防止篡改
+		products := GetProducts()
+		var selectedProduct *Product
+		for _, p := range products {
+			if p.ID == productID {
+				selectedProduct = &p
+				break
+			}
+		}
+
+		if selectedProduct == nil {
+			log.Printf("未找到ID为 %d 的商品", productID)
+			c.HTML(http.StatusOK, "product.html", nil)
+			return
+		}
+
+		// 使用从后端获取的真实价格，而不是前端传来的值
+		price := int(selectedProduct.Price)
+
+		// 验证quantity是否为有效值
+		quantityVal, err := strconv.Atoi(quantityStr)
+		if err != nil || quantityVal < 1 {
+			log.Printf("购买数量无效: %v", err)
+			c.HTML(http.StatusOK, "product.html", nil)
+			return
+		}
+
+		// 计算包含手续费的总价，使用后端的价格
+		total := (float64(price*quantityVal) + 1.9) / 0.971
 
 		c.HTML(http.StatusOK, "payment.html", gin.H{
 			"ProductID": productID,
-			"Points":    points,
-			"Price":     price,
+			"Points":    selectedProduct.Name,
+			"Price":     fmt.Sprintf("%.0f", selectedProduct.Price),
 			"SiteType":  siteType,
 			"Quantity":  quantityStr, // 保持为字符串以满足模板显示需求
 			"Email":     email,
@@ -197,19 +226,60 @@ func createPaymentIntent(c *gin.Context) {
 	// 计算过期时间 - 30分钟后过期
 	expiresAt := time.Now().Add(30 * time.Minute)
 
-	// --- 1. 解析请求体 (如果需要接收来自前端的数据，如金额、商品ID等) ---
-	price := c.PostForm("price")
+	// --- 1. 解析请求体 (如果需要接收来自前端的数据，如商品ID等) ---
+	productIDStr := c.PostForm("productID")
+	// price := c.PostForm("price") // 保留这个参数用于后向兼容
 	siteType := c.PostForm("siteType")
-	quantityStr := c.PostForm("quantity")
-	print("Quant: ", quantityStr)
+	quantityStr := c.PostForm("quantity") // 购买数量
 	email := c.PostForm("email")
-	// 移除paymentMethod处理，使用默认值
-	// paymentMethod := c.PostForm("paymentMethod")
 
-	priceVal, _ := strconv.Atoi(price)
-	quantityVal, _ := strconv.Atoi(quantityStr)
+	// 验证商品ID
+	productID, err := strconv.Atoi(productIDStr)
+	if err != nil {
+		log.Printf("商品ID转换失败: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"message": "无效的商品ID",
+			},
+		})
+		return
+	}
+
+	// 根据商品ID重新获取商品信息，防止篡改
+	products := GetProducts()
+	var selectedProduct *Product
+	for _, p := range products {
+		if p.ID == productID {
+			selectedProduct = &p
+			break
+		}
+	}
+
+	if selectedProduct == nil {
+		log.Printf("未找到ID为 %d 的商品", productID)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"message": "无效的商品ID",
+			},
+		})
+		return
+	}
+
+	// 验证quantity是否为有效值
+	quantityVal, err := strconv.Atoi(quantityStr)
+	if err != nil || quantityVal < 1 {
+		log.Printf("购买数量无效: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"message": "无效的购买数量",
+			},
+		})
+		return
+	}
+
+	// 使用从后端获取的真实价格，而不是前端传来的价格参数
+	priceVal := int(selectedProduct.Price)
 	total := (float64(priceVal*quantityVal) + 1.9) / 0.971
-	log.Println("total:", total)
 
 	// --- 2. 准备 PaymentIntent 参数 ---
 	params := &stripe.PaymentIntentParams{
@@ -217,9 +287,10 @@ func createPaymentIntent(c *gin.Context) {
 		Currency:    stripe.String(string(stripe.CurrencyCNY)),
 		Description: stripe.String("购买灵息积分"),
 		Metadata: map[string]string{ // 可选：添加元数据
-			"email":    email,
-			"sitetype": siteType,
-			"amount":   strconv.Itoa(int(priceVal * quantityVal * 10000.0)),
+			"email":     email,
+			"sitetype":  siteType,
+			"amount":    strconv.Itoa(selectedProduct.Points), // 使用后端验证的价格
+			"productID": strconv.Itoa(productID),              // 记录商品ID到元数据
 		},
 		// 启用自动支付方式选择
 		AutomaticPaymentMethods: &stripe.PaymentIntentAutomaticPaymentMethodsParams{
@@ -279,7 +350,7 @@ func createPaymentIntent(c *gin.Context) {
 
 func successPageHandler(c *gin.Context) {
 	// 1. 从查询参数中获取 PaymentIntent ID
-	paymentIntentID := c.Query("payment_intent") // "pi_3SghbJCW2j6CBP3B0BKuxDRq"
+	paymentIntentID := c.Query("payment_intent")
 	// clientSecret := c.Query("payment_intent_client_secret") // 有时也会用到，用于额外验证
 	redirectStatus := c.Query("redirect_status") // "succeeded"
 

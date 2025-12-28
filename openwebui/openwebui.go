@@ -23,7 +23,7 @@ type UserInfo struct {
 
 func AddBalance(userInfo UserInfo, amount int64, sitetype int) error {
 	// 打印账户信息
-	print("账户ID: ", userInfo.ID, " 余额: ", userInfo.Credit, " 昵称: ", userInfo.Name, " 邮箱: ", userInfo.Email, "\n")
+	log.Print("账户ID: ", userInfo.ID, " 余额: ", userInfo.Credit, " 昵称: ", userInfo.Name, " 邮箱: ", userInfo.Email, "\n")
 
 	// 更新OpenWebUI的账户余额
 	// 在原有余额基础上增加积分
@@ -150,7 +150,7 @@ func GetUserIDWithEmail(email string, sitetype int) UserInfo {
 		for _, v := range result["users"].([]any) {
 			userData := v.(map[string]any)
 			if userData["email"] == email {
-				fmt.Println("存在")
+				// fmt.Println("存在")
 				// 解析credit为int64
 				var credit int64
 				if creditVal, ok := userData["credit"]; ok {
